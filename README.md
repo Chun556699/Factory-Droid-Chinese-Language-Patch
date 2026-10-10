@@ -10,7 +10,7 @@
 
 ## 使用方法
 
-1. 下载本仓库：点击 GitHub 页面右上角 **Code → Download ZIP**，解压到任意位置。
+1. 下载补丁：到 [Releases](../../releases) 页面下载最新 ZIP，或点击右上角 **Code → Download ZIP**，解压到任意位置。
 2. 完全退出 Factory（包括右下角的系统托盘图标）。
 3. **双击 `一键汉化.bat`**，按提示操作即可。
    - 如果电脑上没有安装 Node.js，脚本会询问是否用 winget 自动安装（只需装一次，也可先到 https://nodejs.org 手动安装）。
