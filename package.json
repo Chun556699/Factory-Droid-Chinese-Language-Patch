@@ -1,0 +1,22 @@
+{
+  "name": "factory-zh-cn",
+  "version": "1.0.0",
+  "description": "Factory Desktop (Droid) 简体中文补丁：一键汉化 / 一键恢复",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild src/patcher.js --bundle --platform=node --target=node18 --format=cjs --external:original-fs --outfile=dist/patcher.cjs --legal-comments=eof",
+    "install-zh": "node dist/patcher.cjs install",
+    "restore": "node dist/patcher.cjs restore",
+    "status": "node dist/patcher.cjs status",
+    "report": "node dist/patcher.cjs report"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@electron/asar": "^3.2.17",
+    "acorn": "^8.14.0",
+    "esbuild": "^0.24.0"
+  }
+}

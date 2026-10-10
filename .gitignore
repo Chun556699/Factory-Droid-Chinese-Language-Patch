@@ -1,0 +1,4 @@
+node_modules/
+translations/untranslated.json
+*.log
+.DS_Store
