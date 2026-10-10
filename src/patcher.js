@@ -1,9 +1,13 @@
 'use strict';
-// Factory Desktop 简体中文补丁
-// 在用户本机上对已安装的 Factory 进行汉化：启用应用内置的 zh-CN 语言、注入中文资源、
-// 并同步更新 Electron 内嵌的 asar 完整性校验值。不分发任何 Factory 程序文件。
+// Factory Desktop Simplified Chinese patcher / Factory Desktop 简体中文补丁
 //
-// 用法：node dist/patcher.cjs [install|restore|status|report] [--dir <app-x.y.z 目录>] [--yes] [--no-launch]
+// Patches a locally installed copy of Factory in place: enables the built-in
+// zh-CN locale, injects Chinese resources into the renderer and main process,
+// and re-writes the embedded asar integrity hash. No Factory files are
+// distributed with this tool.
+//
+// Usage: node dist/patcher.cjs [install|restore|status|report]
+//        [--dir <app-x.y.z dir>] [--yes] [--no-launch] [--lang zh|en]
 
 const fs = require('fs');
 const os = require('os');
@@ -25,6 +29,137 @@ const PLURAL_SKIP = /_(zero|one|two|few|many)$/;
 const HAS_LETTERS = /[A-Za-z]{2,}/;
 const CJK_FONTS = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC"';
 
+// ---------------------------------------------------------------- i18n of this tool
+
+const M = {
+  zh: {
+    unknownArg: (a) => `未知参数：${a}`,
+    unknownCommand: (c) => `未知命令：${c}`,
+    winOnly: '目前仅支持 Windows 版 Factory。',
+    installDir: (d) => `Factory 安装目录：${d}\n`,
+    notInstalled: (d) => `未找到 Factory 安装目录：${d}\n请确认已安装 Factory 桌面版，或使用 --dir 指定 app-x.y.z 目录。`,
+    noVersions: (b) => `在 ${b} 中未找到可用的 Factory 版本目录（app-x.y.z）。`,
+    missingFile: (f) => `缺少文件：${f}\n这似乎不是 Factory 的安装目录。`,
+    stillRunning: 'Factory 正在运行，请先完全退出 Factory（包括系统托盘图标）后再运行。',
+    closePrompt:
+      '\n检测到 Factory 正在运行。请先完全退出 Factory（包括系统托盘图标），然后按回车继续。\n' +
+      '输入 K 后回车可强制结束 Factory 进程（进行中的会话会被中断）：',
+    integrityMismatch: 'factory-desktop.exe 与 app.asar 的完整性记录不一致，安装可能已损坏。请重新安装 Factory 后再试。',
+    computedProp: '资源对象中出现了无法解析的计算属性。',
+    templateLiteral: '资源对象中出现了无法解析的模板字符串。',
+    unresolvableRef: (n) => `无法解析资源引用：${n}`,
+    unresolvableNode: (t) => `资源对象中出现了无法解析的语法：${t}`,
+    rendererEnCandidates: (n) => `无法定位英文界面资源（找到 ${n} 个候选）。`,
+    mainEnCandidates: (n) => `无法定位主进程英文资源（找到 ${n} 个候选）。`,
+    mainEnShape: '主进程英文资源结构不符合预期。',
+    anchorFailed: (label, n) => `无法定位补丁位置「${label}」（找到 ${n} 处）。此 Factory 版本可能暂不受支持。`,
+    anchorFailedOnce: (label) => `无法定位补丁位置「${label}」。此 Factory 版本可能暂不受支持。`,
+    uniqueFailed: (label, n) => `无法定位${label}（找到 ${n} 个候选）。此 Factory 版本可能暂不受支持。`,
+    badStructure: '应用结构不符合预期（缺少 .vite 构建目录）。',
+    dictMissing: (p) => `缺少翻译文件：${p}`,
+    unpackedMismatch: '重新打包后的解包文件集合与原版不一致，已中止。',
+    repackCheckFailed: (rel) => `重新打包校验失败：${rel}`,
+    patchedNoBackup: '当前 Factory 已被汉化，但找不到原版备份文件，无法重新打补丁。\n请重新安装 Factory 桌面版后再运行。',
+    alreadyPatched: '检测到已安装过中文补丁，将基于原版备份重新打补丁。',
+    backingUp: '正在备份原版文件...',
+    extracting: '正在解包应用...',
+    patching: '正在应用中文补丁...',
+    repacking: '正在重新打包...',
+    installing: '正在安装...',
+    verifyFailed: '安装后校验失败，请运行「恢复英文原版」。',
+    done: (pct, t, total) => `\n汉化完成！界面文本翻译覆盖率：${pct}%（${t}/${total}）`,
+    langHint: '如果界面仍是英文，请在 Factory 的「设置 → 偏好设置 → 语言」中选择「简体中文」。',
+    launchPrompt: '\n是否立即启动 Factory？[Y/n]：',
+    alreadyEnglish: '当前已是英文原版，无需恢复。',
+    noBackupRestore: '找不到原版备份文件，无法恢复。请重新安装 Factory 桌面版。',
+    restoring: '正在恢复英文原版...',
+    restored: '已恢复英文原版。',
+    restoreVerifyFailed: '恢复后校验失败。',
+    version: (v) => `版本：${v}`,
+    patchState: (s) => `中文补丁：${s}`,
+    installed: '已安装',
+    notPatched: '未安装',
+    backupState: (s) => `原版备份：${s}`,
+    backupYes: '存在',
+    backupNo: '无',
+    dictEntries: (n) => `词典条目：${n}`,
+    coverage: (t, total, n, p) => `覆盖率：${t}/${total}，未翻译的英文文本 ${n} 条已写入：${p}`,
+    noAsar: '找不到原版 app.asar。',
+    error: '[错误]',
+    lblSupported: '支持的语言列表',
+    lblLoader: '语言资源加载器',
+    lblFlag: '界面语言功能开关',
+    lblMainSupported: '主进程支持的语言列表',
+    lblMainResources: '主进程语言资源',
+    lblMainFlag: '主进程语言功能开关',
+    lblRenderer: '渲染进程主脚本',
+    lblMain: '主进程脚本',
+  },
+  en: {
+    unknownArg: (a) => `Unknown argument: ${a}`,
+    unknownCommand: (c) => `Unknown command: ${c}`,
+    winOnly: 'Only the Windows edition of Factory is supported right now.',
+    installDir: (d) => `Factory install directory: ${d}\n`,
+    notInstalled: (d) => `Factory install directory not found: ${d}\nMake sure Factory Desktop is installed, or pass --dir <app-x.y.z dir>.`,
+    noVersions: (b) => `No usable Factory version directory (app-x.y.z) found under ${b}.`,
+    missingFile: (f) => `Missing file: ${f}\nThis does not look like a Factory install directory.`,
+    stillRunning: 'Factory is running. Please quit Factory completely (including the tray icon) and try again.',
+    closePrompt:
+      '\nFactory is running. Please quit it completely (including the tray icon), then press Enter.\n' +
+      'Type K and press Enter to force-kill the Factory process (in-progress sessions will be interrupted): ',
+    integrityMismatch: 'The integrity record inside factory-desktop.exe does not match app.asar. The install may be corrupt; please reinstall Factory and try again.',
+    computedProp: 'A computed property appeared inside a resource object.',
+    templateLiteral: 'An unresolvable template literal appeared inside a resource object.',
+    unresolvableRef: (n) => `Could not resolve resource reference: ${n}`,
+    unresolvableNode: (t) => `Unresolvable syntax inside a resource object: ${t}`,
+    rendererEnCandidates: (n) => `Could not locate the English UI resources (${n} candidates found).`,
+    mainEnCandidates: (n) => `Could not locate the main-process English resources (${n} candidates found).`,
+    mainEnShape: 'The main-process English resources do not have the expected shape.',
+    anchorFailed: (label, n) => `Could not locate the patch point "${label}" (${n} matches). This Factory version may not be supported yet.`,
+    anchorFailedOnce: (label) => `Could not locate the patch point "${label}". This Factory version may not be supported yet.`,
+    uniqueFailed: (label, n) => `Could not locate ${label} (${n} candidates). This Factory version may not be supported yet.`,
+    badStructure: 'Unexpected app structure (missing .vite build directory).',
+    dictMissing: (p) => `Missing translation file: ${p}`,
+    unpackedMismatch: 'The set of unpacked files after repacking does not match the original; aborted.',
+    repackCheckFailed: (rel) => `Repack verification failed: ${rel}`,
+    patchedNoBackup: 'This Factory is already patched, but the original backup files are missing.\nPlease reinstall Factory Desktop and run again.',
+    alreadyPatched: 'The Chinese patch is already installed; re-patching from the original backups.',
+    backingUp: 'Backing up original files...',
+    extracting: 'Extracting the app...',
+    patching: 'Applying the Chinese patch...',
+    repacking: 'Repacking...',
+    installing: 'Installing...',
+    verifyFailed: 'Post-install verification failed. Please run the restore script.',
+    done: (pct, t, total) => `\nDone! UI text translated: ${pct}% (${t}/${total})`,
+    langHint: 'If the UI is still in English, choose 简体中文 (Simplified Chinese) under Settings -> Preferences -> Language.',
+    launchPrompt: '\nLaunch Factory now? [Y/n]: ',
+    alreadyEnglish: 'Factory is already the original English version; nothing to restore.',
+    noBackupRestore: 'Original backup files not found. Please reinstall Factory Desktop.',
+    restoring: 'Restoring the original English version...',
+    restored: 'Original English version restored.',
+    restoreVerifyFailed: 'Verification failed after restore.',
+    version: (v) => `Version: ${v}`,
+    patchState: (s) => `Chinese patch: ${s}`,
+    installed: 'installed',
+    notPatched: 'not installed',
+    backupState: (s) => `Original backup: ${s}`,
+    backupYes: 'present',
+    backupNo: 'none',
+    dictEntries: (n) => `Dictionary entries: ${n}`,
+    coverage: (t, total, n, p) => `Coverage: ${t}/${total}. ${n} untranslated strings written to: ${p}`,
+    noAsar: 'Original app.asar not found.',
+    error: '[Error]',
+    lblSupported: 'supported locale list',
+    lblLoader: 'locale resource loader',
+    lblFlag: 'AppLocalization feature flag',
+    lblMainSupported: 'main-process supported locale list',
+    lblMainResources: 'main-process locale resources',
+    lblMainFlag: 'main-process AppLocalization flag',
+    lblRenderer: 'renderer main bundle',
+    lblMain: 'main-process bundle',
+  },
+};
+
 class PatchError extends Error {}
 const fail = (message) => {
   throw new PatchError(message);
@@ -36,17 +171,26 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // ---------------------------------------------------------------- CLI / environment
 
 function parseArgs(argv) {
-  const opts = { command: 'install', dir: null, yes: false, launch: true };
+  const opts = { command: 'install', dir: null, yes: false, launch: true, lang: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--dir') opts.dir = argv[++i];
+    else if (arg === '--lang') opts.lang = argv[++i];
     else if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--no-launch') opts.launch = false;
     else if (!arg.startsWith('-')) opts.command = arg;
-    else fail(`未知参数：${arg}`);
+    else fail(`Unknown argument: ${arg}`);
   }
-  if (!['install', 'restore', 'status', 'report'].includes(opts.command)) fail(`未知命令：${opts.command}`);
+  if (!['install', 'restore', 'status', 'report'].includes(opts.command)) fail(`Unknown command: ${opts.command}`);
   return opts;
+}
+
+function detectLang(cliLang) {
+  const pick = cliLang || (process.env.FACTORY_ZH_LANG || '').slice(0, 2) || '';
+  if (/^zh/i.test(pick)) return 'zh';
+  if (/^en/i.test(pick)) return 'en';
+  const loc = (Intl.DateTimeFormat().resolvedOptions().locale || '').toLowerCase();
+  return loc.startsWith('zh') ? 'zh' : 'en';
 }
 
 function ask(question) {
@@ -68,20 +212,21 @@ function factoryRoot() {
   return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Factory');
 }
 
-function locateAppDir(dirOpt) {
+// Picks the newest app-x.y.z directory containing an asar (or uses --dir verbatim).
+function locateAppDir(dirOpt, m) {
   if (dirOpt) return path.resolve(dirOpt);
   const base = factoryRoot();
-  if (!fs.existsSync(base)) fail(`未找到 Factory 安装目录：${base}\n请确认已安装 Factory 桌面版，或使用 --dir 指定 app-x.y.z 目录。`);
+  if (!fs.existsSync(base)) fail(m.notInstalled(base));
   const versions = fs
     .readdirSync(base)
     .map((name) => /^app-(\d+(?:\.\d+)*)$/.exec(name))
-    .filter((m) => m && fs.existsSync(path.join(base, m[0], 'resources', 'app.asar')))
+    .filter((x) => x && fs.existsSync(path.join(base, x[0], 'resources', 'app.asar')))
     .sort((x, y) => compareVersions(y[1], x[1]));
-  if (!versions.length) fail(`在 ${base} 中未找到可用的 Factory 版本目录（app-x.y.z）。`);
+  if (!versions.length) fail(m.noVersions(base));
   return path.join(base, versions[0][0]);
 }
 
-function appPaths(appDir) {
+function appPaths(appDir, m) {
   const res = path.join(appDir, 'resources');
   const p = {
     appDir,
@@ -91,10 +236,11 @@ function appPaths(appDir) {
   };
   p.asarBackup = p.asar + BACKUP_SUFFIX;
   p.exeBackup = p.exe + BACKUP_SUFFIX;
-  for (const f of [p.asar, p.exe]) if (!fs.existsSync(f)) fail(`缺少文件：${f}\n这似乎不是 Factory 的安装目录。`);
+  for (const f of [p.asar, p.exe]) if (!fs.existsSync(f)) fail(m.missingFile(f));
   return p;
 }
 
+// Factory processes whose executable lives inside the given app directory.
 function runningInstances(appDir) {
   if (process.platform !== 'win32') return [];
   const script =
@@ -112,15 +258,12 @@ function runningInstances(appDir) {
     .filter(({ exePath }) => !exePath || path.resolve(exePath).toLowerCase().startsWith(target));
 }
 
-async function ensureClosed(appDir, opts) {
+async function ensureClosed(appDir, opts, m) {
   for (;;) {
     const procs = runningInstances(appDir);
     if (!procs.length) return;
-    if (opts.yes) fail('Factory 正在运行，请先完全退出 Factory（包括系统托盘图标）后再运行。');
-    const answer = await ask(
-      '\n检测到 Factory 正在运行。请先完全退出 Factory（包括系统托盘图标），然后按回车继续。\n' +
-        '输入 K 后回车可强制结束 Factory 进程（进行中的会话会被中断）：',
-    );
+    if (opts.yes) fail(m.stillRunning);
+    const answer = await ask(m.closePrompt);
     if (answer.toLowerCase() === 'k') {
       const args = procs.flatMap(({ pid }) => ['/PID', pid]);
       try {
@@ -143,24 +286,15 @@ function countOccurrences(buf, needle) {
   return count;
 }
 
-// Electron 将 app.asar 头部的 SHA256 写在 exe 资源中（EnableEmbeddedAsarIntegrityValidation）。
-function integrityInfo(asarFile, exeFile) {
+// Electron stores the app.asar header SHA256 inside the exe resources
+// (EnableEmbeddedAsarIntegrityValidation). Returns whether the exe needs patching.
+function integrityInfo(asarFile, exeFile, m) {
   const hash = headerHash(asarFile);
   const exe = fs.readFileSync(exeFile);
   const count = countOccurrences(exe, Buffer.from(hash));
   if (count === 1) return { hash, exe, embedded: true };
   if (count === 0 && !exe.includes(Buffer.from('"file":"resources\\\\app.asar"'))) return { hash, exe, embedded: false };
-  fail('factory-desktop.exe 与 app.asar 的完整性记录不一致，安装可能已损坏。请重新安装 Factory 后再试。');
-}
-
-function walkFiles(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walkFiles(full));
-    else out.push(full);
-  }
-  return out;
+  fail(m.integrityMismatch);
 }
 
 function collectEntries(header, prefix = '', out = new Map()) {
@@ -173,6 +307,11 @@ function collectEntries(header, prefix = '', out = new Map()) {
 }
 
 // ---------------------------------------------------------------- English resource extraction
+//
+// Factory bundles its i18next resources as plain JS object literals inside the
+// minified bundles. We parse the bundle with acorn and evaluate only the
+// literals (plus Object.assign calls and identifier references) to recover the
+// resource trees — the same technique used to extract the Japanese bundle.
 
 function parseProgram(src) {
   try {
@@ -191,7 +330,7 @@ function topLevelDecls(ast) {
   return decls;
 }
 
-function makeEvaluator(decls) {
+function makeEvaluator(decls, m) {
   const memo = new Map();
   const ev = (node) => {
     switch (node.type) {
@@ -200,7 +339,7 @@ function makeEvaluator(decls) {
         for (const prop of node.properties) {
           if (prop.type === 'SpreadElement') Object.assign(out, ev(prop.argument));
           else if (!prop.computed) out[prop.key.type === 'Identifier' ? prop.key.name : String(prop.key.value)] = ev(prop.value);
-          else fail('资源对象中出现了无法解析的计算属性。');
+          else fail(m.computedProp);
         }
         return out;
       }
@@ -209,12 +348,12 @@ function makeEvaluator(decls) {
       case 'Literal':
         return node.value;
       case 'TemplateLiteral':
-        if (node.expressions.length) fail('资源对象中出现了无法解析的模板字符串。');
+        if (node.expressions.length) fail(m.templateLiteral);
         return node.quasis[0].value.cooked;
       case 'Identifier': {
         if (!memo.has(node.name)) {
           const init = decls.get(node.name);
-          if (!init) fail(`无法解析资源引用：${node.name}`);
+          if (!init) fail(m.unresolvableRef(node.name));
           memo.set(node.name, ev(init));
         }
         return memo.get(node.name);
@@ -223,7 +362,7 @@ function makeEvaluator(decls) {
         if (isObjectAssign(node)) return Object.assign({}, ...node.arguments.map(ev));
         break;
     }
-    fail(`资源对象中出现了无法解析的语法：${node.type}`);
+    fail(m.unresolvableNode(node.type));
   };
   return ev;
 }
@@ -238,8 +377,8 @@ function isObjectAssign(node) {
   );
 }
 
-// 渲染进程：const X = normalize({...Object.assign({"./common.json": ..., ...}), components: ...})
-function extractRendererEnglish(src) {
+// Renderer: const X = normalize({...Object.assign({"./common.json": ..., ...}), components: ...})
+function extractRendererEnglish(src, m) {
   const decls = topLevelDecls(parseProgram(src));
   const isGlob = (node) =>
     node &&
@@ -252,8 +391,8 @@ function extractRendererEnglish(src) {
       init.arguments[0]?.type === 'ObjectExpression' &&
       init.arguments[0].properties.some((p) => p.type === 'SpreadElement' && isGlob(p.argument)),
   );
-  if (roots.length !== 1) fail(`无法定位英文界面资源（找到 ${roots.length} 个候选）。`);
-  const raw = makeEvaluator(decls)(roots[0].arguments[0]);
+  if (roots.length !== 1) fail(m.rendererEnCandidates(roots.length));
+  const raw = makeEvaluator(decls, m)(roots[0].arguments[0]);
   const out = {};
   for (const [key, value] of Object.entries(raw)) out[key.replace(/^.*\//, '').replace(/\.json$/, '')] = value;
   return out;
@@ -261,15 +400,16 @@ function extractRendererEnglish(src) {
 
 const MAIN_RESOURCES_RE = /([\w$]+)=\{\[([\w$]+)\.English\]:([\w$]+),\[\2\.Japanese\]:\{desktop:([\w$]+)\}\}/g;
 
-// 主进程：X = {[L.English]: EN, [L.Japanese]: {desktop: JA}}
-function extractMainEnglish(src) {
+// Main process: X = {[L.English]: EN, [L.Japanese]: {desktop: JA}}
+function extractMainEnglish(src, m) {
   const matches = [...src.matchAll(MAIN_RESOURCES_RE)];
-  if (matches.length !== 1) fail(`无法定位主进程英文资源（找到 ${matches.length} 个候选）。`);
-  const tree = makeEvaluator(topLevelDecls(parseProgram(src)))({ type: 'Identifier', name: matches[0][3] });
-  if (!tree || typeof tree.desktop !== 'object') fail('主进程英文资源结构不符合预期。');
+  if (matches.length !== 1) fail(m.mainEnCandidates(matches.length));
+  const tree = makeEvaluator(topLevelDecls(parseProgram(src)), m)({ type: 'Identifier', name: matches[0][3] });
+  if (!tree || typeof tree.desktop !== 'object') fail(m.mainEnShape);
   return tree.desktop;
 }
 
+// Builds the zh resource tree by mapping each English leaf through the dictionary.
 function translateTree(node, dict, stats) {
   const out = {};
   for (const [key, value] of Object.entries(node)) {
@@ -288,43 +428,49 @@ function translateTree(node, dict, stats) {
 }
 
 // ---------------------------------------------------------------- source patching
+//
+// Patch points are located by content patterns (locale enum member access is
+// stable across minifier renames), so the patcher usually survives app updates.
+// Every pattern must match exactly once, otherwise we abort without writing.
 
-function replaceOnce(src, regex, replacer, label) {
+function replaceOnce(src, regex, replacer, label, m) {
   const matches = [...src.matchAll(new RegExp(regex.source, 'g'))];
-  if (matches.length !== 1) fail(`无法定位补丁位置「${label}」（找到 ${matches.length} 处）。此 Factory 版本可能暂不受支持。`);
-  const m = matches[0];
-  return src.slice(0, m.index) + replacer(...m) + src.slice(m.index + m[0].length);
+  if (matches.length !== 1) fail(m.anchorFailed(label, matches.length));
+  const x = matches[0];
+  return src.slice(0, x.index) + replacer(...x) + src.slice(x.index + x[0].length);
 }
 
-function replaceAll(src, regex, replacement, label) {
+function replaceAll(src, regex, replacement, label, m) {
   const count = [...src.matchAll(new RegExp(regex.source, 'g'))].length;
-  if (!count) fail(`无法定位补丁位置「${label}」。此 Factory 版本可能暂不受支持。`);
+  if (!count) fail(m.anchorFailedOnce(label));
   return src.replace(new RegExp(regex.source, 'g'), replacement);
 }
 
 const SUPPORTED_RE = /([\w$]+)=\[([\w$]+)\.English,\2\.Japanese\]/;
 const jsonLiteral = (obj) => `JSON.parse(${JSON.stringify(JSON.stringify(obj))})`;
 
-function patchRenderer(src) {
-  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, '支持的语言列表');
+function patchRenderer(src, m) {
+  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, m.lblSupported, m);
   src = replaceOnce(
     src,
     /\[([\w$]+)\.Japanese\]:(async\(\)=>await [\w$]+\(\(\)=>import\("\.\/)(resources-[\w$-]+\.js)("\),\[\],import\.meta\.url\))/,
-    (m, e, head, _file, tail) => `[${e}.ChineseSimplified]:${head}${ZH_ASSET}${tail},${m}`,
-    '语言资源加载器',
+    (x, e, head, _file, tail) => `[${e}.ChineseSimplified]:${head}${ZH_ASSET}${tail},${x}`,
+    m.lblLoader,
+    m,
   );
-  return replaceAll(src, /[\w$]+\([\w$]+\.AppLocalization\)/, '!0', '界面语言功能开关');
+  return replaceAll(src, /[\w$]+\([\w$]+\.AppLocalization\)/, '!0', m.lblFlag, m);
 }
 
-function patchMain(src, zhDesktop) {
-  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, '主进程支持的语言列表');
+function patchMain(src, zhDesktop, m) {
+  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, m.lblMainSupported, m);
   src = replaceOnce(
     src,
     MAIN_RESOURCES_RE,
     (_, name, e, en, ja) => `${name}={[${e}.English]:${en},[${e}.Japanese]:{desktop:${ja}},[${e}.ChineseSimplified]:{desktop:${jsonLiteral(zhDesktop)}}}`,
-    '主进程语言资源',
+    m.lblMainResources,
+    m,
   );
-  return replaceAll(src, /[\w$]+\.getFlag\([\w$]+\.FactoryFeatureFlags\.AppLocalization\)/, '!0', '主进程语言功能开关');
+  return replaceAll(src, /[\w$]+\.getFlag\([\w$]+\.FactoryFeatureFlags\.AppLocalization\)/, '!0', m.lblMainFlag, m);
 }
 
 function patchCss(src) {
@@ -332,46 +478,48 @@ function patchCss(src) {
   return re.test(src) ? src.replace(re, `$1 ${CJK_FONTS},$2`) : null;
 }
 
-function findUnique(files, predicate, label) {
+function findUnique(files, predicate, label, m) {
   const matches = files.filter((f) => predicate(fs.readFileSync(f, 'utf8')));
-  if (matches.length !== 1) fail(`无法定位${label}（找到 ${matches.length} 个候选）。此 Factory 版本可能暂不受支持。`);
+  if (matches.length !== 1) fail(m.uniqueFailed(label, matches.length));
   return matches[0];
 }
 
-function locateSources(appDir) {
+// Locates the renderer bundle, the main-process bundle and the stylesheet by
+// their content rather than by hashed filenames.
+function locateSources(appDir, m) {
   const assetsDir = path.join(appDir, '.vite', 'renderer', 'main_window', 'assets');
   const buildDir = path.join(appDir, '.vite', 'build');
-  if (!fs.existsSync(assetsDir) || !fs.existsSync(buildDir)) fail('应用结构不符合预期（缺少 .vite 构建目录）。');
+  if (!fs.existsSync(assetsDir) || !fs.existsSync(buildDir)) fail(m.badStructure);
   const assets = fs.readdirSync(assetsDir).map((f) => path.join(assetsDir, f));
   const builds = fs.readdirSync(buildDir).map((f) => path.join(buildDir, f)).filter((f) => f.endsWith('.js'));
   return {
     assetsDir,
-    renderer: findUnique(assets.filter((f) => f.endsWith('.js')), (s) => s.includes(ENUM_MARKER) && s.includes('.AppLocalization'), '渲染进程主脚本'),
-    main: findUnique(builds, (s) => s.includes(ENUM_MARKER) && s.includes('FactoryFeatureFlags.AppLocalization'), '主进程脚本'),
+    renderer: findUnique(assets.filter((f) => f.endsWith('.js')), (s) => s.includes(ENUM_MARKER) && s.includes('.AppLocalization'), m.lblRenderer, m),
+    main: findUnique(builds, (s) => s.includes(ENUM_MARKER) && s.includes('FactoryFeatureFlags.AppLocalization'), m.lblMain, m),
     css: assets.filter((f) => f.endsWith('.css')).find((f) => fs.readFileSync(f, 'utf8').includes('--core-v2-font-family-sans:')),
   };
 }
 
-function loadDictionary() {
-  if (!fs.existsSync(DICT_PATH)) fail(`缺少翻译文件：${DICT_PATH}`);
+function loadDictionary(m) {
+  if (!fs.existsSync(DICT_PATH)) fail(m.dictMissing(DICT_PATH));
   return JSON.parse(fs.readFileSync(DICT_PATH, 'utf8'));
 }
 
-function buildTranslations(sources, dict) {
+function buildTranslations(sources, dict, m) {
   const rendererSrc = fs.readFileSync(sources.renderer, 'utf8');
   const mainSrc = fs.readFileSync(sources.main, 'utf8');
   const stats = { total: 0, translated: 0, missing: new Set() };
-  const zhRenderer = translateTree(extractRendererEnglish(rendererSrc), dict, stats);
-  const zhMain = translateTree(extractMainEnglish(mainSrc), dict, stats);
+  const zhRenderer = translateTree(extractRendererEnglish(rendererSrc, m), dict, stats);
+  const zhMain = translateTree(extractMainEnglish(mainSrc, m), dict, stats);
   return { rendererSrc, mainSrc, zhRenderer, zhMain, stats };
 }
 
-function applyPatches(appDir, dict) {
-  const sources = locateSources(appDir);
-  const t = buildTranslations(sources, dict);
+function applyPatches(appDir, dict, m) {
+  const sources = locateSources(appDir, m);
+  const t = buildTranslations(sources, dict, m);
   const outputs = [
-    [sources.renderer, patchRenderer(t.rendererSrc)],
-    [sources.main, patchMain(t.mainSrc, t.zhMain)],
+    [sources.renderer, patchRenderer(t.rendererSrc, m)],
+    [sources.main, patchMain(t.mainSrc, t.zhMain, m)],
     [path.join(sources.assetsDir, ZH_ASSET), `const resources=${jsonLiteral(t.zhRenderer)};export{resources};\n`],
   ];
   const css = sources.css && patchCss(fs.readFileSync(sources.css, 'utf8'));
@@ -385,19 +533,21 @@ function applyPatches(appDir, dict) {
 
 // ---------------------------------------------------------------- packing
 
-async function packArchive(appDir, outFile, origHeaderString, changed) {
+// Repacks the tree, then verifies that every file we did not touch still has
+// the exact same integrity hash as in the original header. Unpacked native
+// modules keep their original header entries byte-for-byte.
+async function packArchive(appDir, outFile, origHeaderString, changed, m) {
   await asar.createPackageWithOptions(appDir, outFile, { unpack: '*.node' });
   const orig = collectEntries(JSON.parse(origHeaderString));
   const next = collectEntries(JSON.parse(headerString(outFile)));
   const origUnpacked = [...orig].filter(([, e]) => e.unpacked).map(([k]) => k).sort();
   const nextUnpacked = [...next].filter(([, e]) => e.unpacked).map(([k]) => k).sort();
-  if (origUnpacked.join('\n') !== nextUnpacked.join('\n')) fail('重新打包后的解包文件集合与原版不一致，已中止。');
+  if (origUnpacked.join('\n') !== nextUnpacked.join('\n')) fail(m.unpackedMismatch);
   for (const [rel, entry] of orig) {
     if (entry.unpacked || changed.includes(rel)) continue;
     const n = next.get(rel);
-    if (!n || n.size !== entry.size || n.integrity?.hash !== entry.integrity?.hash) fail(`重新打包校验失败：${rel}`);
+    if (!n || n.size !== entry.size || n.integrity?.hash !== entry.integrity?.hash) fail(m.repackCheckFailed(rel));
   }
-  // 保持解包文件（原生模块）的头部条目与原版逐字节一致。
   let buf = fs.readFileSync(outFile);
   for (const rel of origUnpacked) {
     const from = Buffer.from(JSON.stringify(next.get(rel)));
@@ -413,6 +563,8 @@ async function packArchive(appDir, outFile, origHeaderString, changed) {
 
 // ---------------------------------------------------------------- commands
 
+// Installs the new asar first and the exe second; a failure between them leaves
+// a consistent state and rolls the asar back to the backup.
 function swapIn(p, asarSource, exeBuffer) {
   const asarTmp = p.asar + TMP_SUFFIX;
   const exeTmp = p.exe + TMP_SUFFIX;
@@ -429,18 +581,19 @@ function swapIn(p, asarSource, exeBuffer) {
   }
 }
 
-async function prepareBackups(p) {
+// Ensures backup copies of the ORIGINAL asar + exe exist next to the install.
+// If Factory is already patched we repatch from the backups (idempotent).
+async function prepareBackups(p, m) {
   if (isPatched(p.asar)) {
-    if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup))
-      fail('当前 Factory 已被汉化，但找不到原版备份文件，无法重新打补丁。\n请重新安装 Factory 桌面版后再运行。');
-    log('检测到已安装过中文补丁，将基于原版备份重新打补丁。');
+    if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup)) fail(m.patchedNoBackup);
+    log(m.alreadyPatched);
   } else {
-    integrityInfo(p.asar, p.exe);
-    log('正在备份原版文件...');
+    integrityInfo(p.asar, p.exe, m);
+    log(m.backingUp);
     fs.copyFileSync(p.asar, p.asarBackup);
     fs.copyFileSync(p.exe, p.exeBackup);
   }
-  return integrityInfo(p.asarBackup, p.exeBackup);
+  return integrityInfo(p.asarBackup, p.exeBackup, m);
 }
 
 async function extractOriginal(p, work) {
@@ -448,43 +601,44 @@ async function extractOriginal(p, work) {
   fs.mkdirSync(srcDir, { recursive: true });
   const archive = path.join(srcDir, 'app.asar');
   fs.copyFileSync(p.asarBackup, archive);
+  // asar looks for "<archive>.unpacked" next to the archive when extracting.
   if (fs.existsSync(p.unpacked)) fs.cpSync(p.unpacked, archive + '.unpacked', { recursive: true });
   const appDir = path.join(work, 'app');
   asar.extractAll(archive, appDir);
   return { appDir, origHeader: headerString(archive) };
 }
 
-async function install(p, opts) {
-  const dict = loadDictionary();
-  await ensureClosed(p.appDir, opts);
-  const integrity = await prepareBackups(p);
+async function install(p, opts, m) {
+  const dict = loadDictionary(m);
+  await ensureClosed(p.appDir, opts, m);
+  const integrity = await prepareBackups(p, m);
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-zh-cn-'));
   try {
-    log('正在解包应用...');
+    log(m.extracting);
     const { appDir, origHeader } = await extractOriginal(p, work);
-    log('正在应用中文补丁...');
-    const { stats, changed } = applyPatches(appDir, dict);
-    log('正在重新打包...');
+    log(m.patching);
+    const { stats, changed } = applyPatches(appDir, dict, m);
+    log(m.repacking);
     const outAsar = path.join(work, 'out', 'app.asar');
     fs.mkdirSync(path.dirname(outAsar), { recursive: true });
-    const newHash = await packArchive(appDir, outAsar, origHeader, changed);
+    const newHash = await packArchive(appDir, outAsar, origHeader, changed, m);
     let exe = null;
     if (integrity.embedded) {
       exe = Buffer.from(integrity.exe);
       Buffer.from(newHash).copy(exe, exe.indexOf(Buffer.from(integrity.hash)));
     }
-    await ensureClosed(p.appDir, opts);
-    log('正在安装...');
+    await ensureClosed(p.appDir, opts, m);
+    log(m.installing);
     swapIn(p, outAsar, exe);
-    if (headerHash(p.asar) !== newHash || (exe && !fs.readFileSync(p.exe).includes(Buffer.from(newHash)))) fail('安装后校验失败，请运行「恢复英文原版」。');
+    if (headerHash(p.asar) !== newHash || (exe && !fs.readFileSync(p.exe).includes(Buffer.from(newHash)))) fail(m.verifyFailed);
     const pct = ((100 * stats.translated) / Math.max(stats.total, 1)).toFixed(1);
-    log(`\n汉化完成！界面文本翻译覆盖率：${pct}%（${stats.translated}/${stats.total}）`);
-    log('如果界面仍是英文，请在 Factory 的「设置 → 偏好设置 → 语言」中选择「简体中文」。');
+    log(m.done(pct, stats.translated, stats.total));
+    log(m.langHint);
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
   if (opts.launch && !opts.yes && !opts.dir) {
-    const answer = await ask('\n是否立即启动 Factory？[Y/n]：');
+    const answer = await ask(m.launchPrompt);
     if (!answer || /^y/i.test(answer)) {
       const stub = path.join(path.dirname(p.appDir), 'factory-desktop.exe');
       spawn(fs.existsSync(stub) ? stub : p.exe, [], { detached: true, stdio: 'ignore' }).unref();
@@ -492,33 +646,35 @@ async function install(p, opts) {
   }
 }
 
-async function restore(p, opts) {
+async function restore(p, opts, m) {
   if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup)) {
-    if (!isPatched(p.asar)) return log('当前已是英文原版，无需恢复。');
-    fail('找不到原版备份文件，无法恢复。请重新安装 Factory 桌面版。');
+    if (!isPatched(p.asar)) return log(m.alreadyEnglish);
+    fail(m.noBackupRestore);
   }
-  integrityInfo(p.asarBackup, p.exeBackup);
-  await ensureClosed(p.appDir, opts);
-  log('正在恢复英文原版...');
+  integrityInfo(p.asarBackup, p.exeBackup, m);
+  await ensureClosed(p.appDir, opts, m);
+  log(m.restoring);
   swapIn(p, p.asarBackup, fs.readFileSync(p.exeBackup));
-  if (headerHash(p.asar) !== headerHash(p.asarBackup)) fail('恢复后校验失败。');
+  if (headerHash(p.asar) !== headerHash(p.asarBackup)) fail(m.restoreVerifyFailed);
   fs.rmSync(p.asarBackup, { force: true });
   fs.rmSync(p.exeBackup, { force: true });
-  log('已恢复英文原版。');
+  log(m.restored);
 }
 
-function status(p) {
+function status(p, m) {
   const patched = isPatched(p.asar);
   const hasBackup = fs.existsSync(p.asarBackup) && fs.existsSync(p.exeBackup);
-  log(`版本：${path.basename(p.appDir).replace(/^app-/, '')}`);
-  log(`中文补丁：${patched ? '已安装' : '未安装'}`);
-  log(`原版备份：${hasBackup ? '存在' : '无'}`);
-  log(`词典条目：${Object.keys(loadDictionary()).length}`);
+  log(m.version(path.basename(p.appDir).replace(/^app-/, '')));
+  log(m.patchState(patched ? m.installed : m.notPatched));
+  log(m.backupState(hasBackup ? m.backupYes : m.backupNo));
+  log(m.dictEntries(Object.keys(loadDictionary(m)).length));
 }
 
-async function report(p) {
+// Writes translations/untranslated.json: every English string with no Chinese
+// entry yet — the to-do list for contributors after Factory updates.
+async function report(p, m) {
   const source = isPatched(p.asar) ? p.asarBackup : p.asar;
-  if (!fs.existsSync(source)) fail('找不到原版 app.asar。');
+  if (!fs.existsSync(source)) fail(m.noAsar);
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-zh-cn-'));
   try {
     const archive = path.join(work, 'app.asar');
@@ -526,10 +682,10 @@ async function report(p) {
     if (fs.existsSync(p.unpacked)) fs.cpSync(p.unpacked, archive + '.unpacked', { recursive: true });
     const appDir = path.join(work, 'app');
     asar.extractAll(archive, appDir);
-    const { stats } = buildTranslations(locateSources(appDir), loadDictionary());
+    const { stats } = buildTranslations(locateSources(appDir, m), loadDictionary(m), m);
     const missing = Object.fromEntries([...stats.missing].sort().map((s) => [s, '']));
     fs.writeFileSync(UNTRANSLATED_PATH, JSON.stringify(missing, null, 2) + '\n');
-    log(`覆盖率：${stats.translated}/${stats.total}，未翻译的英文文本 ${Object.keys(missing).length} 条已写入：${UNTRANSLATED_PATH}`);
+    log(m.coverage(stats.translated, stats.total, Object.keys(missing).length, UNTRANSLATED_PATH));
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
@@ -537,16 +693,21 @@ async function report(p) {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  if (process.platform !== 'win32' && !opts.dir) fail('目前仅支持 Windows 版 Factory。');
-  const p = appPaths(locateAppDir(opts.dir));
-  log(`Factory 安装目录：${p.appDir}\n`);
-  if (opts.command === 'install') await install(p, opts);
-  else if (opts.command === 'restore') await restore(p, opts);
-  else if (opts.command === 'status') status(p);
-  else await report(p);
+  const m = M[detectLang(opts.lang)];
+  if (process.platform !== 'win32' && !opts.dir) fail(m.winOnly);
+  const p = appPaths(locateAppDir(opts.dir, m), m);
+  log(m.installDir(p.appDir));
+  if (opts.command === 'install') await install(p, opts, m);
+  else if (opts.command === 'restore') await restore(p, opts, m);
+  else if (opts.command === 'status') status(p, m);
+  else await report(p, m);
 }
 
 main().catch((err) => {
-  console.error(err instanceof PatchError ? `\n[错误] ${err.message}` : err);
+  let lang = 'en';
+  try {
+    lang = detectLang(parseArgs(process.argv.slice(2)).lang);
+  } catch {}
+  console.error(err instanceof PatchError ? `\n${M[lang].error} ${err.message}` : err);
   process.exitCode = 1;
 });

@@ -9087,6 +9087,138 @@ var ENUM_MARKER = '.ChineseSimplified="zh-CN"';
 var PLURAL_SKIP = /_(zero|one|two|few|many)$/;
 var HAS_LETTERS = /[A-Za-z]{2,}/;
 var CJK_FONTS = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC"';
+var M = {
+  zh: {
+    unknownArg: (a) => `\u672A\u77E5\u53C2\u6570\uFF1A${a}`,
+    unknownCommand: (c) => `\u672A\u77E5\u547D\u4EE4\uFF1A${c}`,
+    winOnly: "\u76EE\u524D\u4EC5\u652F\u6301 Windows \u7248 Factory\u3002",
+    installDir: (d) => `Factory \u5B89\u88C5\u76EE\u5F55\uFF1A${d}
+`,
+    notInstalled: (d) => `\u672A\u627E\u5230 Factory \u5B89\u88C5\u76EE\u5F55\uFF1A${d}
+\u8BF7\u786E\u8BA4\u5DF2\u5B89\u88C5 Factory \u684C\u9762\u7248\uFF0C\u6216\u4F7F\u7528 --dir \u6307\u5B9A app-x.y.z \u76EE\u5F55\u3002`,
+    noVersions: (b) => `\u5728 ${b} \u4E2D\u672A\u627E\u5230\u53EF\u7528\u7684 Factory \u7248\u672C\u76EE\u5F55\uFF08app-x.y.z\uFF09\u3002`,
+    missingFile: (f) => `\u7F3A\u5C11\u6587\u4EF6\uFF1A${f}
+\u8FD9\u4F3C\u4E4E\u4E0D\u662F Factory \u7684\u5B89\u88C5\u76EE\u5F55\u3002`,
+    stillRunning: "Factory \u6B63\u5728\u8FD0\u884C\uFF0C\u8BF7\u5148\u5B8C\u5168\u9000\u51FA Factory\uFF08\u5305\u62EC\u7CFB\u7EDF\u6258\u76D8\u56FE\u6807\uFF09\u540E\u518D\u8FD0\u884C\u3002",
+    closePrompt: "\n\u68C0\u6D4B\u5230 Factory \u6B63\u5728\u8FD0\u884C\u3002\u8BF7\u5148\u5B8C\u5168\u9000\u51FA Factory\uFF08\u5305\u62EC\u7CFB\u7EDF\u6258\u76D8\u56FE\u6807\uFF09\uFF0C\u7136\u540E\u6309\u56DE\u8F66\u7EE7\u7EED\u3002\n\u8F93\u5165 K \u540E\u56DE\u8F66\u53EF\u5F3A\u5236\u7ED3\u675F Factory \u8FDB\u7A0B\uFF08\u8FDB\u884C\u4E2D\u7684\u4F1A\u8BDD\u4F1A\u88AB\u4E2D\u65AD\uFF09\uFF1A",
+    integrityMismatch: "factory-desktop.exe \u4E0E app.asar \u7684\u5B8C\u6574\u6027\u8BB0\u5F55\u4E0D\u4E00\u81F4\uFF0C\u5B89\u88C5\u53EF\u80FD\u5DF2\u635F\u574F\u3002\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u540E\u518D\u8BD5\u3002",
+    computedProp: "\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u8BA1\u7B97\u5C5E\u6027\u3002",
+    templateLiteral: "\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u6A21\u677F\u5B57\u7B26\u4E32\u3002",
+    unresolvableRef: (n) => `\u65E0\u6CD5\u89E3\u6790\u8D44\u6E90\u5F15\u7528\uFF1A${n}`,
+    unresolvableNode: (t) => `\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u8BED\u6CD5\uFF1A${t}`,
+    rendererEnCandidates: (n) => `\u65E0\u6CD5\u5B9A\u4F4D\u82F1\u6587\u754C\u9762\u8D44\u6E90\uFF08\u627E\u5230 ${n} \u4E2A\u5019\u9009\uFF09\u3002`,
+    mainEnCandidates: (n) => `\u65E0\u6CD5\u5B9A\u4F4D\u4E3B\u8FDB\u7A0B\u82F1\u6587\u8D44\u6E90\uFF08\u627E\u5230 ${n} \u4E2A\u5019\u9009\uFF09\u3002`,
+    mainEnShape: "\u4E3B\u8FDB\u7A0B\u82F1\u6587\u8D44\u6E90\u7ED3\u6784\u4E0D\u7B26\u5408\u9884\u671F\u3002",
+    anchorFailed: (label, n) => `\u65E0\u6CD5\u5B9A\u4F4D\u8865\u4E01\u4F4D\u7F6E\u300C${label}\u300D\uFF08\u627E\u5230 ${n} \u5904\uFF09\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`,
+    anchorFailedOnce: (label) => `\u65E0\u6CD5\u5B9A\u4F4D\u8865\u4E01\u4F4D\u7F6E\u300C${label}\u300D\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`,
+    uniqueFailed: (label, n) => `\u65E0\u6CD5\u5B9A\u4F4D${label}\uFF08\u627E\u5230 ${n} \u4E2A\u5019\u9009\uFF09\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`,
+    badStructure: "\u5E94\u7528\u7ED3\u6784\u4E0D\u7B26\u5408\u9884\u671F\uFF08\u7F3A\u5C11 .vite \u6784\u5EFA\u76EE\u5F55\uFF09\u3002",
+    dictMissing: (p) => `\u7F3A\u5C11\u7FFB\u8BD1\u6587\u4EF6\uFF1A${p}`,
+    unpackedMismatch: "\u91CD\u65B0\u6253\u5305\u540E\u7684\u89E3\u5305\u6587\u4EF6\u96C6\u5408\u4E0E\u539F\u7248\u4E0D\u4E00\u81F4\uFF0C\u5DF2\u4E2D\u6B62\u3002",
+    repackCheckFailed: (rel) => `\u91CD\u65B0\u6253\u5305\u6821\u9A8C\u5931\u8D25\uFF1A${rel}`,
+    patchedNoBackup: "\u5F53\u524D Factory \u5DF2\u88AB\u6C49\u5316\uFF0C\u4F46\u627E\u4E0D\u5230\u539F\u7248\u5907\u4EFD\u6587\u4EF6\uFF0C\u65E0\u6CD5\u91CD\u65B0\u6253\u8865\u4E01\u3002\n\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u684C\u9762\u7248\u540E\u518D\u8FD0\u884C\u3002",
+    alreadyPatched: "\u68C0\u6D4B\u5230\u5DF2\u5B89\u88C5\u8FC7\u4E2D\u6587\u8865\u4E01\uFF0C\u5C06\u57FA\u4E8E\u539F\u7248\u5907\u4EFD\u91CD\u65B0\u6253\u8865\u4E01\u3002",
+    backingUp: "\u6B63\u5728\u5907\u4EFD\u539F\u7248\u6587\u4EF6...",
+    extracting: "\u6B63\u5728\u89E3\u5305\u5E94\u7528...",
+    patching: "\u6B63\u5728\u5E94\u7528\u4E2D\u6587\u8865\u4E01...",
+    repacking: "\u6B63\u5728\u91CD\u65B0\u6253\u5305...",
+    installing: "\u6B63\u5728\u5B89\u88C5...",
+    verifyFailed: "\u5B89\u88C5\u540E\u6821\u9A8C\u5931\u8D25\uFF0C\u8BF7\u8FD0\u884C\u300C\u6062\u590D\u82F1\u6587\u539F\u7248\u300D\u3002",
+    done: (pct, t, total) => `
+\u6C49\u5316\u5B8C\u6210\uFF01\u754C\u9762\u6587\u672C\u7FFB\u8BD1\u8986\u76D6\u7387\uFF1A${pct}%\uFF08${t}/${total}\uFF09`,
+    langHint: "\u5982\u679C\u754C\u9762\u4ECD\u662F\u82F1\u6587\uFF0C\u8BF7\u5728 Factory \u7684\u300C\u8BBE\u7F6E \u2192 \u504F\u597D\u8BBE\u7F6E \u2192 \u8BED\u8A00\u300D\u4E2D\u9009\u62E9\u300C\u7B80\u4F53\u4E2D\u6587\u300D\u3002",
+    launchPrompt: "\n\u662F\u5426\u7ACB\u5373\u542F\u52A8 Factory\uFF1F[Y/n]\uFF1A",
+    alreadyEnglish: "\u5F53\u524D\u5DF2\u662F\u82F1\u6587\u539F\u7248\uFF0C\u65E0\u9700\u6062\u590D\u3002",
+    noBackupRestore: "\u627E\u4E0D\u5230\u539F\u7248\u5907\u4EFD\u6587\u4EF6\uFF0C\u65E0\u6CD5\u6062\u590D\u3002\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u684C\u9762\u7248\u3002",
+    restoring: "\u6B63\u5728\u6062\u590D\u82F1\u6587\u539F\u7248...",
+    restored: "\u5DF2\u6062\u590D\u82F1\u6587\u539F\u7248\u3002",
+    restoreVerifyFailed: "\u6062\u590D\u540E\u6821\u9A8C\u5931\u8D25\u3002",
+    version: (v) => `\u7248\u672C\uFF1A${v}`,
+    patchState: (s) => `\u4E2D\u6587\u8865\u4E01\uFF1A${s}`,
+    installed: "\u5DF2\u5B89\u88C5",
+    notPatched: "\u672A\u5B89\u88C5",
+    backupState: (s) => `\u539F\u7248\u5907\u4EFD\uFF1A${s}`,
+    backupYes: "\u5B58\u5728",
+    backupNo: "\u65E0",
+    dictEntries: (n) => `\u8BCD\u5178\u6761\u76EE\uFF1A${n}`,
+    coverage: (t, total, n, p) => `\u8986\u76D6\u7387\uFF1A${t}/${total}\uFF0C\u672A\u7FFB\u8BD1\u7684\u82F1\u6587\u6587\u672C ${n} \u6761\u5DF2\u5199\u5165\uFF1A${p}`,
+    noAsar: "\u627E\u4E0D\u5230\u539F\u7248 app.asar\u3002",
+    error: "[\u9519\u8BEF]",
+    lblSupported: "\u652F\u6301\u7684\u8BED\u8A00\u5217\u8868",
+    lblLoader: "\u8BED\u8A00\u8D44\u6E90\u52A0\u8F7D\u5668",
+    lblFlag: "\u754C\u9762\u8BED\u8A00\u529F\u80FD\u5F00\u5173",
+    lblMainSupported: "\u4E3B\u8FDB\u7A0B\u652F\u6301\u7684\u8BED\u8A00\u5217\u8868",
+    lblMainResources: "\u4E3B\u8FDB\u7A0B\u8BED\u8A00\u8D44\u6E90",
+    lblMainFlag: "\u4E3B\u8FDB\u7A0B\u8BED\u8A00\u529F\u80FD\u5F00\u5173",
+    lblRenderer: "\u6E32\u67D3\u8FDB\u7A0B\u4E3B\u811A\u672C",
+    lblMain: "\u4E3B\u8FDB\u7A0B\u811A\u672C"
+  },
+  en: {
+    unknownArg: (a) => `Unknown argument: ${a}`,
+    unknownCommand: (c) => `Unknown command: ${c}`,
+    winOnly: "Only the Windows edition of Factory is supported right now.",
+    installDir: (d) => `Factory install directory: ${d}
+`,
+    notInstalled: (d) => `Factory install directory not found: ${d}
+Make sure Factory Desktop is installed, or pass --dir <app-x.y.z dir>.`,
+    noVersions: (b) => `No usable Factory version directory (app-x.y.z) found under ${b}.`,
+    missingFile: (f) => `Missing file: ${f}
+This does not look like a Factory install directory.`,
+    stillRunning: "Factory is running. Please quit Factory completely (including the tray icon) and try again.",
+    closePrompt: "\nFactory is running. Please quit it completely (including the tray icon), then press Enter.\nType K and press Enter to force-kill the Factory process (in-progress sessions will be interrupted): ",
+    integrityMismatch: "The integrity record inside factory-desktop.exe does not match app.asar. The install may be corrupt; please reinstall Factory and try again.",
+    computedProp: "A computed property appeared inside a resource object.",
+    templateLiteral: "An unresolvable template literal appeared inside a resource object.",
+    unresolvableRef: (n) => `Could not resolve resource reference: ${n}`,
+    unresolvableNode: (t) => `Unresolvable syntax inside a resource object: ${t}`,
+    rendererEnCandidates: (n) => `Could not locate the English UI resources (${n} candidates found).`,
+    mainEnCandidates: (n) => `Could not locate the main-process English resources (${n} candidates found).`,
+    mainEnShape: "The main-process English resources do not have the expected shape.",
+    anchorFailed: (label, n) => `Could not locate the patch point "${label}" (${n} matches). This Factory version may not be supported yet.`,
+    anchorFailedOnce: (label) => `Could not locate the patch point "${label}". This Factory version may not be supported yet.`,
+    uniqueFailed: (label, n) => `Could not locate ${label} (${n} candidates). This Factory version may not be supported yet.`,
+    badStructure: "Unexpected app structure (missing .vite build directory).",
+    dictMissing: (p) => `Missing translation file: ${p}`,
+    unpackedMismatch: "The set of unpacked files after repacking does not match the original; aborted.",
+    repackCheckFailed: (rel) => `Repack verification failed: ${rel}`,
+    patchedNoBackup: "This Factory is already patched, but the original backup files are missing.\nPlease reinstall Factory Desktop and run again.",
+    alreadyPatched: "The Chinese patch is already installed; re-patching from the original backups.",
+    backingUp: "Backing up original files...",
+    extracting: "Extracting the app...",
+    patching: "Applying the Chinese patch...",
+    repacking: "Repacking...",
+    installing: "Installing...",
+    verifyFailed: "Post-install verification failed. Please run the restore script.",
+    done: (pct, t, total) => `
+Done! UI text translated: ${pct}% (${t}/${total})`,
+    langHint: "If the UI is still in English, choose \u7B80\u4F53\u4E2D\u6587 (Simplified Chinese) under Settings -> Preferences -> Language.",
+    launchPrompt: "\nLaunch Factory now? [Y/n]: ",
+    alreadyEnglish: "Factory is already the original English version; nothing to restore.",
+    noBackupRestore: "Original backup files not found. Please reinstall Factory Desktop.",
+    restoring: "Restoring the original English version...",
+    restored: "Original English version restored.",
+    restoreVerifyFailed: "Verification failed after restore.",
+    version: (v) => `Version: ${v}`,
+    patchState: (s) => `Chinese patch: ${s}`,
+    installed: "installed",
+    notPatched: "not installed",
+    backupState: (s) => `Original backup: ${s}`,
+    backupYes: "present",
+    backupNo: "none",
+    dictEntries: (n) => `Dictionary entries: ${n}`,
+    coverage: (t, total, n, p) => `Coverage: ${t}/${total}. ${n} untranslated strings written to: ${p}`,
+    noAsar: "Original app.asar not found.",
+    error: "[Error]",
+    lblSupported: "supported locale list",
+    lblLoader: "locale resource loader",
+    lblFlag: "AppLocalization feature flag",
+    lblMainSupported: "main-process supported locale list",
+    lblMainResources: "main-process locale resources",
+    lblMainFlag: "main-process AppLocalization flag",
+    lblRenderer: "renderer main bundle",
+    lblMain: "main-process bundle"
+  }
+};
 var PatchError = class extends Error {
 };
 var fail = (message) => {
@@ -9096,17 +9228,25 @@ var log = (...args) => console.log(...args);
 var sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
 var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function parseArgs(argv) {
-  const opts = { command: "install", dir: null, yes: false, launch: true };
+  const opts = { command: "install", dir: null, yes: false, launch: true, lang: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dir") opts.dir = argv[++i];
+    else if (arg === "--lang") opts.lang = argv[++i];
     else if (arg === "--yes" || arg === "-y") opts.yes = true;
     else if (arg === "--no-launch") opts.launch = false;
     else if (!arg.startsWith("-")) opts.command = arg;
-    else fail(`\u672A\u77E5\u53C2\u6570\uFF1A${arg}`);
+    else fail(`Unknown argument: ${arg}`);
   }
-  if (!["install", "restore", "status", "report"].includes(opts.command)) fail(`\u672A\u77E5\u547D\u4EE4\uFF1A${opts.command}`);
+  if (!["install", "restore", "status", "report"].includes(opts.command)) fail(`Unknown command: ${opts.command}`);
   return opts;
+}
+function detectLang(cliLang) {
+  const pick = cliLang || (process.env.FACTORY_ZH_LANG || "").slice(0, 2) || "";
+  if (/^zh/i.test(pick)) return "zh";
+  if (/^en/i.test(pick)) return "en";
+  const loc = (Intl.DateTimeFormat().resolvedOptions().locale || "").toLowerCase();
+  return loc.startsWith("zh") ? "zh" : "en";
 }
 function ask(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -9124,16 +9264,15 @@ function compareVersions(a, b) {
 function factoryRoot() {
   return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Factory");
 }
-function locateAppDir(dirOpt) {
+function locateAppDir(dirOpt, m) {
   if (dirOpt) return path.resolve(dirOpt);
   const base = factoryRoot();
-  if (!fs.existsSync(base)) fail(`\u672A\u627E\u5230 Factory \u5B89\u88C5\u76EE\u5F55\uFF1A${base}
-\u8BF7\u786E\u8BA4\u5DF2\u5B89\u88C5 Factory \u684C\u9762\u7248\uFF0C\u6216\u4F7F\u7528 --dir \u6307\u5B9A app-x.y.z \u76EE\u5F55\u3002`);
-  const versions = fs.readdirSync(base).map((name) => /^app-(\d+(?:\.\d+)*)$/.exec(name)).filter((m) => m && fs.existsSync(path.join(base, m[0], "resources", "app.asar"))).sort((x, y) => compareVersions(y[1], x[1]));
-  if (!versions.length) fail(`\u5728 ${base} \u4E2D\u672A\u627E\u5230\u53EF\u7528\u7684 Factory \u7248\u672C\u76EE\u5F55\uFF08app-x.y.z\uFF09\u3002`);
+  if (!fs.existsSync(base)) fail(m.notInstalled(base));
+  const versions = fs.readdirSync(base).map((name) => /^app-(\d+(?:\.\d+)*)$/.exec(name)).filter((x) => x && fs.existsSync(path.join(base, x[0], "resources", "app.asar"))).sort((x, y) => compareVersions(y[1], x[1]));
+  if (!versions.length) fail(m.noVersions(base));
   return path.join(base, versions[0][0]);
 }
-function appPaths(appDir) {
+function appPaths(appDir, m) {
   const res = path.join(appDir, "resources");
   const p = {
     appDir,
@@ -9143,8 +9282,7 @@ function appPaths(appDir) {
   };
   p.asarBackup = p.asar + BACKUP_SUFFIX;
   p.exeBackup = p.exe + BACKUP_SUFFIX;
-  for (const f of [p.asar, p.exe]) if (!fs.existsSync(f)) fail(`\u7F3A\u5C11\u6587\u4EF6\uFF1A${f}
-\u8FD9\u4F3C\u4E4E\u4E0D\u662F Factory \u7684\u5B89\u88C5\u76EE\u5F55\u3002`);
+  for (const f of [p.asar, p.exe]) if (!fs.existsSync(f)) fail(m.missingFile(f));
   return p;
 }
 function runningInstances(appDir) {
@@ -9157,14 +9295,12 @@ function runningInstances(appDir) {
     return { pid, exePath };
   }).filter(({ exePath }) => !exePath || path.resolve(exePath).toLowerCase().startsWith(target));
 }
-async function ensureClosed(appDir, opts) {
+async function ensureClosed(appDir, opts, m) {
   for (; ; ) {
     const procs = runningInstances(appDir);
     if (!procs.length) return;
-    if (opts.yes) fail("Factory \u6B63\u5728\u8FD0\u884C\uFF0C\u8BF7\u5148\u5B8C\u5168\u9000\u51FA Factory\uFF08\u5305\u62EC\u7CFB\u7EDF\u6258\u76D8\u56FE\u6807\uFF09\u540E\u518D\u8FD0\u884C\u3002");
-    const answer = await ask(
-      "\n\u68C0\u6D4B\u5230 Factory \u6B63\u5728\u8FD0\u884C\u3002\u8BF7\u5148\u5B8C\u5168\u9000\u51FA Factory\uFF08\u5305\u62EC\u7CFB\u7EDF\u6258\u76D8\u56FE\u6807\uFF09\uFF0C\u7136\u540E\u6309\u56DE\u8F66\u7EE7\u7EED\u3002\n\u8F93\u5165 K \u540E\u56DE\u8F66\u53EF\u5F3A\u5236\u7ED3\u675F Factory \u8FDB\u7A0B\uFF08\u8FDB\u884C\u4E2D\u7684\u4F1A\u8BDD\u4F1A\u88AB\u4E2D\u65AD\uFF09\uFF1A"
-    );
+    if (opts.yes) fail(m.stillRunning);
+    const answer = await ask(m.closePrompt);
     if (answer.toLowerCase() === "k") {
       const args = procs.flatMap(({ pid }) => ["/PID", pid]);
       try {
@@ -9183,13 +9319,13 @@ function countOccurrences(buf, needle) {
   for (let i = buf.indexOf(needle); i !== -1; i = buf.indexOf(needle, i + 1)) count++;
   return count;
 }
-function integrityInfo(asarFile, exeFile) {
+function integrityInfo(asarFile, exeFile, m) {
   const hash = headerHash(asarFile);
   const exe = fs.readFileSync(exeFile);
   const count = countOccurrences(exe, Buffer.from(hash));
   if (count === 1) return { hash, exe, embedded: true };
   if (count === 0 && !exe.includes(Buffer.from('"file":"resources\\\\app.asar"'))) return { hash, exe, embedded: false };
-  fail("factory-desktop.exe \u4E0E app.asar \u7684\u5B8C\u6574\u6027\u8BB0\u5F55\u4E0D\u4E00\u81F4\uFF0C\u5B89\u88C5\u53EF\u80FD\u5DF2\u635F\u574F\u3002\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u540E\u518D\u8BD5\u3002");
+  fail(m.integrityMismatch);
 }
 function collectEntries(header, prefix = "", out = /* @__PURE__ */ new Map()) {
   for (const [name, entry] of Object.entries(header.files || {})) {
@@ -9214,7 +9350,7 @@ function topLevelDecls(ast) {
   }
   return decls;
 }
-function makeEvaluator(decls) {
+function makeEvaluator(decls, m) {
   const memo = /* @__PURE__ */ new Map();
   const ev = (node) => {
     switch (node.type) {
@@ -9223,7 +9359,7 @@ function makeEvaluator(decls) {
         for (const prop of node.properties) {
           if (prop.type === "SpreadElement") Object.assign(out, ev(prop.argument));
           else if (!prop.computed) out[prop.key.type === "Identifier" ? prop.key.name : String(prop.key.value)] = ev(prop.value);
-          else fail("\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u8BA1\u7B97\u5C5E\u6027\u3002");
+          else fail(m.computedProp);
         }
         return out;
       }
@@ -9232,12 +9368,12 @@ function makeEvaluator(decls) {
       case "Literal":
         return node.value;
       case "TemplateLiteral":
-        if (node.expressions.length) fail("\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u6A21\u677F\u5B57\u7B26\u4E32\u3002");
+        if (node.expressions.length) fail(m.templateLiteral);
         return node.quasis[0].value.cooked;
       case "Identifier": {
         if (!memo.has(node.name)) {
           const init = decls.get(node.name);
-          if (!init) fail(`\u65E0\u6CD5\u89E3\u6790\u8D44\u6E90\u5F15\u7528\uFF1A${node.name}`);
+          if (!init) fail(m.unresolvableRef(node.name));
           memo.set(node.name, ev(init));
         }
         return memo.get(node.name);
@@ -9246,31 +9382,31 @@ function makeEvaluator(decls) {
         if (isObjectAssign(node)) return Object.assign({}, ...node.arguments.map(ev));
         break;
     }
-    fail(`\u8D44\u6E90\u5BF9\u8C61\u4E2D\u51FA\u73B0\u4E86\u65E0\u6CD5\u89E3\u6790\u7684\u8BED\u6CD5\uFF1A${node.type}`);
+    fail(m.unresolvableNode(node.type));
   };
   return ev;
 }
 function isObjectAssign(node) {
   return node.type === "CallExpression" && node.callee.type === "MemberExpression" && node.callee.object.type === "Identifier" && node.callee.object.name === "Object" && node.callee.property.name === "assign";
 }
-function extractRendererEnglish(src) {
+function extractRendererEnglish(src, m) {
   const decls = topLevelDecls(parseProgram(src));
   const isGlob = (node) => node && isObjectAssign(node) && node.arguments[0]?.type === "ObjectExpression" && node.arguments[0].properties.some((p) => p.type === "Property" && p.key.type === "Literal" && p.key.value === "./common.json");
   const roots = [...decls.values()].filter(
     (init) => init.type === "CallExpression" && init.arguments[0]?.type === "ObjectExpression" && init.arguments[0].properties.some((p) => p.type === "SpreadElement" && isGlob(p.argument))
   );
-  if (roots.length !== 1) fail(`\u65E0\u6CD5\u5B9A\u4F4D\u82F1\u6587\u754C\u9762\u8D44\u6E90\uFF08\u627E\u5230 ${roots.length} \u4E2A\u5019\u9009\uFF09\u3002`);
-  const raw = makeEvaluator(decls)(roots[0].arguments[0]);
+  if (roots.length !== 1) fail(m.rendererEnCandidates(roots.length));
+  const raw = makeEvaluator(decls, m)(roots[0].arguments[0]);
   const out = {};
   for (const [key, value] of Object.entries(raw)) out[key.replace(/^.*\//, "").replace(/\.json$/, "")] = value;
   return out;
 }
 var MAIN_RESOURCES_RE = /([\w$]+)=\{\[([\w$]+)\.English\]:([\w$]+),\[\2\.Japanese\]:\{desktop:([\w$]+)\}\}/g;
-function extractMainEnglish(src) {
+function extractMainEnglish(src, m) {
   const matches = [...src.matchAll(MAIN_RESOURCES_RE)];
-  if (matches.length !== 1) fail(`\u65E0\u6CD5\u5B9A\u4F4D\u4E3B\u8FDB\u7A0B\u82F1\u6587\u8D44\u6E90\uFF08\u627E\u5230 ${matches.length} \u4E2A\u5019\u9009\uFF09\u3002`);
-  const tree = makeEvaluator(topLevelDecls(parseProgram(src)))({ type: "Identifier", name: matches[0][3] });
-  if (!tree || typeof tree.desktop !== "object") fail("\u4E3B\u8FDB\u7A0B\u82F1\u6587\u8D44\u6E90\u7ED3\u6784\u4E0D\u7B26\u5408\u9884\u671F\u3002");
+  if (matches.length !== 1) fail(m.mainEnCandidates(matches.length));
+  const tree = makeEvaluator(topLevelDecls(parseProgram(src)), m)({ type: "Identifier", name: matches[0][3] });
+  if (!tree || typeof tree.desktop !== "object") fail(m.mainEnShape);
   return tree.desktop;
 }
 function translateTree(node, dict, stats) {
@@ -9289,79 +9425,81 @@ function translateTree(node, dict, stats) {
   }
   return out;
 }
-function replaceOnce(src, regex, replacer, label) {
+function replaceOnce(src, regex, replacer, label, m) {
   const matches = [...src.matchAll(new RegExp(regex.source, "g"))];
-  if (matches.length !== 1) fail(`\u65E0\u6CD5\u5B9A\u4F4D\u8865\u4E01\u4F4D\u7F6E\u300C${label}\u300D\uFF08\u627E\u5230 ${matches.length} \u5904\uFF09\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`);
-  const m = matches[0];
-  return src.slice(0, m.index) + replacer(...m) + src.slice(m.index + m[0].length);
+  if (matches.length !== 1) fail(m.anchorFailed(label, matches.length));
+  const x = matches[0];
+  return src.slice(0, x.index) + replacer(...x) + src.slice(x.index + x[0].length);
 }
-function replaceAll(src, regex, replacement, label) {
+function replaceAll(src, regex, replacement, label, m) {
   const count = [...src.matchAll(new RegExp(regex.source, "g"))].length;
-  if (!count) fail(`\u65E0\u6CD5\u5B9A\u4F4D\u8865\u4E01\u4F4D\u7F6E\u300C${label}\u300D\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`);
+  if (!count) fail(m.anchorFailedOnce(label));
   return src.replace(new RegExp(regex.source, "g"), replacement);
 }
 var SUPPORTED_RE = /([\w$]+)=\[([\w$]+)\.English,\2\.Japanese\]/;
 var jsonLiteral = (obj) => `JSON.parse(${JSON.stringify(JSON.stringify(obj))})`;
-function patchRenderer(src) {
-  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, "\u652F\u6301\u7684\u8BED\u8A00\u5217\u8868");
+function patchRenderer(src, m) {
+  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, m.lblSupported, m);
   src = replaceOnce(
     src,
     /\[([\w$]+)\.Japanese\]:(async\(\)=>await [\w$]+\(\(\)=>import\("\.\/)(resources-[\w$-]+\.js)("\),\[\],import\.meta\.url\))/,
-    (m, e, head, _file, tail) => `[${e}.ChineseSimplified]:${head}${ZH_ASSET}${tail},${m}`,
-    "\u8BED\u8A00\u8D44\u6E90\u52A0\u8F7D\u5668"
+    (x, e, head, _file, tail) => `[${e}.ChineseSimplified]:${head}${ZH_ASSET}${tail},${x}`,
+    m.lblLoader,
+    m
   );
-  return replaceAll(src, /[\w$]+\([\w$]+\.AppLocalization\)/, "!0", "\u754C\u9762\u8BED\u8A00\u529F\u80FD\u5F00\u5173");
+  return replaceAll(src, /[\w$]+\([\w$]+\.AppLocalization\)/, "!0", m.lblFlag, m);
 }
-function patchMain(src, zhDesktop) {
-  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, "\u4E3B\u8FDB\u7A0B\u652F\u6301\u7684\u8BED\u8A00\u5217\u8868");
+function patchMain(src, zhDesktop, m) {
+  src = replaceOnce(src, SUPPORTED_RE, (_, name, e) => `${name}=[${e}.English,${e}.ChineseSimplified,${e}.Japanese]`, m.lblMainSupported, m);
   src = replaceOnce(
     src,
     MAIN_RESOURCES_RE,
     (_, name, e, en, ja) => `${name}={[${e}.English]:${en},[${e}.Japanese]:{desktop:${ja}},[${e}.ChineseSimplified]:{desktop:${jsonLiteral(zhDesktop)}}}`,
-    "\u4E3B\u8FDB\u7A0B\u8BED\u8A00\u8D44\u6E90"
+    m.lblMainResources,
+    m
   );
-  return replaceAll(src, /[\w$]+\.getFlag\([\w$]+\.FactoryFeatureFlags\.AppLocalization\)/, "!0", "\u4E3B\u8FDB\u7A0B\u8BED\u8A00\u529F\u80FD\u5F00\u5173");
+  return replaceAll(src, /[\w$]+\.getFlag\([\w$]+\.FactoryFeatureFlags\.AppLocalization\)/, "!0", m.lblMainFlag, m);
 }
 function patchCss(src) {
   const re = /(--core-v2-font-family-sans:\s*"Geist",\s*system-ui,)(\s*sans-serif)/;
   return re.test(src) ? src.replace(re, `$1 ${CJK_FONTS},$2`) : null;
 }
-function findUnique(files, predicate, label) {
+function findUnique(files, predicate, label, m) {
   const matches = files.filter((f) => predicate(fs.readFileSync(f, "utf8")));
-  if (matches.length !== 1) fail(`\u65E0\u6CD5\u5B9A\u4F4D${label}\uFF08\u627E\u5230 ${matches.length} \u4E2A\u5019\u9009\uFF09\u3002\u6B64 Factory \u7248\u672C\u53EF\u80FD\u6682\u4E0D\u53D7\u652F\u6301\u3002`);
+  if (matches.length !== 1) fail(m.uniqueFailed(label, matches.length));
   return matches[0];
 }
-function locateSources(appDir) {
+function locateSources(appDir, m) {
   const assetsDir = path.join(appDir, ".vite", "renderer", "main_window", "assets");
   const buildDir = path.join(appDir, ".vite", "build");
-  if (!fs.existsSync(assetsDir) || !fs.existsSync(buildDir)) fail("\u5E94\u7528\u7ED3\u6784\u4E0D\u7B26\u5408\u9884\u671F\uFF08\u7F3A\u5C11 .vite \u6784\u5EFA\u76EE\u5F55\uFF09\u3002");
+  if (!fs.existsSync(assetsDir) || !fs.existsSync(buildDir)) fail(m.badStructure);
   const assets = fs.readdirSync(assetsDir).map((f) => path.join(assetsDir, f));
   const builds = fs.readdirSync(buildDir).map((f) => path.join(buildDir, f)).filter((f) => f.endsWith(".js"));
   return {
     assetsDir,
-    renderer: findUnique(assets.filter((f) => f.endsWith(".js")), (s) => s.includes(ENUM_MARKER) && s.includes(".AppLocalization"), "\u6E32\u67D3\u8FDB\u7A0B\u4E3B\u811A\u672C"),
-    main: findUnique(builds, (s) => s.includes(ENUM_MARKER) && s.includes("FactoryFeatureFlags.AppLocalization"), "\u4E3B\u8FDB\u7A0B\u811A\u672C"),
+    renderer: findUnique(assets.filter((f) => f.endsWith(".js")), (s) => s.includes(ENUM_MARKER) && s.includes(".AppLocalization"), m.lblRenderer, m),
+    main: findUnique(builds, (s) => s.includes(ENUM_MARKER) && s.includes("FactoryFeatureFlags.AppLocalization"), m.lblMain, m),
     css: assets.filter((f) => f.endsWith(".css")).find((f) => fs.readFileSync(f, "utf8").includes("--core-v2-font-family-sans:"))
   };
 }
-function loadDictionary() {
-  if (!fs.existsSync(DICT_PATH)) fail(`\u7F3A\u5C11\u7FFB\u8BD1\u6587\u4EF6\uFF1A${DICT_PATH}`);
+function loadDictionary(m) {
+  if (!fs.existsSync(DICT_PATH)) fail(m.dictMissing(DICT_PATH));
   return JSON.parse(fs.readFileSync(DICT_PATH, "utf8"));
 }
-function buildTranslations(sources, dict) {
+function buildTranslations(sources, dict, m) {
   const rendererSrc = fs.readFileSync(sources.renderer, "utf8");
   const mainSrc = fs.readFileSync(sources.main, "utf8");
   const stats = { total: 0, translated: 0, missing: /* @__PURE__ */ new Set() };
-  const zhRenderer = translateTree(extractRendererEnglish(rendererSrc), dict, stats);
-  const zhMain = translateTree(extractMainEnglish(mainSrc), dict, stats);
+  const zhRenderer = translateTree(extractRendererEnglish(rendererSrc, m), dict, stats);
+  const zhMain = translateTree(extractMainEnglish(mainSrc, m), dict, stats);
   return { rendererSrc, mainSrc, zhRenderer, zhMain, stats };
 }
-function applyPatches(appDir, dict) {
-  const sources = locateSources(appDir);
-  const t = buildTranslations(sources, dict);
+function applyPatches(appDir, dict, m) {
+  const sources = locateSources(appDir, m);
+  const t = buildTranslations(sources, dict, m);
   const outputs = [
-    [sources.renderer, patchRenderer(t.rendererSrc)],
-    [sources.main, patchMain(t.mainSrc, t.zhMain)],
+    [sources.renderer, patchRenderer(t.rendererSrc, m)],
+    [sources.main, patchMain(t.mainSrc, t.zhMain, m)],
     [path.join(sources.assetsDir, ZH_ASSET), `const resources=${jsonLiteral(t.zhRenderer)};export{resources};
 `]
   ];
@@ -9373,17 +9511,17 @@ function applyPatches(appDir, dict) {
   }
   return { stats: t.stats, changed: outputs.map(([file]) => path.relative(appDir, file).split(path.sep).join("/")) };
 }
-async function packArchive(appDir, outFile, origHeaderString, changed) {
+async function packArchive(appDir, outFile, origHeaderString, changed, m) {
   await asar.createPackageWithOptions(appDir, outFile, { unpack: "*.node" });
   const orig = collectEntries(JSON.parse(origHeaderString));
   const next = collectEntries(JSON.parse(headerString(outFile)));
   const origUnpacked = [...orig].filter(([, e]) => e.unpacked).map(([k]) => k).sort();
   const nextUnpacked = [...next].filter(([, e]) => e.unpacked).map(([k]) => k).sort();
-  if (origUnpacked.join("\n") !== nextUnpacked.join("\n")) fail("\u91CD\u65B0\u6253\u5305\u540E\u7684\u89E3\u5305\u6587\u4EF6\u96C6\u5408\u4E0E\u539F\u7248\u4E0D\u4E00\u81F4\uFF0C\u5DF2\u4E2D\u6B62\u3002");
+  if (origUnpacked.join("\n") !== nextUnpacked.join("\n")) fail(m.unpackedMismatch);
   for (const [rel, entry] of orig) {
     if (entry.unpacked || changed.includes(rel)) continue;
     const n = next.get(rel);
-    if (!n || n.size !== entry.size || n.integrity?.hash !== entry.integrity?.hash) fail(`\u91CD\u65B0\u6253\u5305\u6821\u9A8C\u5931\u8D25\uFF1A${rel}`);
+    if (!n || n.size !== entry.size || n.integrity?.hash !== entry.integrity?.hash) fail(m.repackCheckFailed(rel));
   }
   let buf = fs.readFileSync(outFile);
   for (const rel of origUnpacked) {
@@ -9412,18 +9550,17 @@ function swapIn(p, asarSource, exeBuffer) {
     throw err;
   }
 }
-async function prepareBackups(p) {
+async function prepareBackups(p, m) {
   if (isPatched(p.asar)) {
-    if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup))
-      fail("\u5F53\u524D Factory \u5DF2\u88AB\u6C49\u5316\uFF0C\u4F46\u627E\u4E0D\u5230\u539F\u7248\u5907\u4EFD\u6587\u4EF6\uFF0C\u65E0\u6CD5\u91CD\u65B0\u6253\u8865\u4E01\u3002\n\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u684C\u9762\u7248\u540E\u518D\u8FD0\u884C\u3002");
-    log("\u68C0\u6D4B\u5230\u5DF2\u5B89\u88C5\u8FC7\u4E2D\u6587\u8865\u4E01\uFF0C\u5C06\u57FA\u4E8E\u539F\u7248\u5907\u4EFD\u91CD\u65B0\u6253\u8865\u4E01\u3002");
+    if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup)) fail(m.patchedNoBackup);
+    log(m.alreadyPatched);
   } else {
-    integrityInfo(p.asar, p.exe);
-    log("\u6B63\u5728\u5907\u4EFD\u539F\u7248\u6587\u4EF6...");
+    integrityInfo(p.asar, p.exe, m);
+    log(m.backingUp);
     fs.copyFileSync(p.asar, p.asarBackup);
     fs.copyFileSync(p.exe, p.exeBackup);
   }
-  return integrityInfo(p.asarBackup, p.exeBackup);
+  return integrityInfo(p.asarBackup, p.exeBackup, m);
 }
 async function extractOriginal(p, work) {
   const srcDir = path.join(work, "src");
@@ -9435,69 +9572,68 @@ async function extractOriginal(p, work) {
   asar.extractAll(archive, appDir);
   return { appDir, origHeader: headerString(archive) };
 }
-async function install(p, opts) {
-  const dict = loadDictionary();
-  await ensureClosed(p.appDir, opts);
-  const integrity = await prepareBackups(p);
+async function install(p, opts, m) {
+  const dict = loadDictionary(m);
+  await ensureClosed(p.appDir, opts, m);
+  const integrity = await prepareBackups(p, m);
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "factory-zh-cn-"));
   try {
-    log("\u6B63\u5728\u89E3\u5305\u5E94\u7528...");
+    log(m.extracting);
     const { appDir, origHeader } = await extractOriginal(p, work);
-    log("\u6B63\u5728\u5E94\u7528\u4E2D\u6587\u8865\u4E01...");
-    const { stats, changed } = applyPatches(appDir, dict);
-    log("\u6B63\u5728\u91CD\u65B0\u6253\u5305...");
+    log(m.patching);
+    const { stats, changed } = applyPatches(appDir, dict, m);
+    log(m.repacking);
     const outAsar = path.join(work, "out", "app.asar");
     fs.mkdirSync(path.dirname(outAsar), { recursive: true });
-    const newHash = await packArchive(appDir, outAsar, origHeader, changed);
+    const newHash = await packArchive(appDir, outAsar, origHeader, changed, m);
     let exe = null;
     if (integrity.embedded) {
       exe = Buffer.from(integrity.exe);
       Buffer.from(newHash).copy(exe, exe.indexOf(Buffer.from(integrity.hash)));
     }
-    await ensureClosed(p.appDir, opts);
-    log("\u6B63\u5728\u5B89\u88C5...");
+    await ensureClosed(p.appDir, opts, m);
+    log(m.installing);
     swapIn(p, outAsar, exe);
-    if (headerHash(p.asar) !== newHash || exe && !fs.readFileSync(p.exe).includes(Buffer.from(newHash))) fail("\u5B89\u88C5\u540E\u6821\u9A8C\u5931\u8D25\uFF0C\u8BF7\u8FD0\u884C\u300C\u6062\u590D\u82F1\u6587\u539F\u7248\u300D\u3002");
+    if (headerHash(p.asar) !== newHash || exe && !fs.readFileSync(p.exe).includes(Buffer.from(newHash))) fail(m.verifyFailed);
     const pct = (100 * stats.translated / Math.max(stats.total, 1)).toFixed(1);
-    log(`
-\u6C49\u5316\u5B8C\u6210\uFF01\u754C\u9762\u6587\u672C\u7FFB\u8BD1\u8986\u76D6\u7387\uFF1A${pct}%\uFF08${stats.translated}/${stats.total}\uFF09`);
-    log("\u5982\u679C\u754C\u9762\u4ECD\u662F\u82F1\u6587\uFF0C\u8BF7\u5728 Factory \u7684\u300C\u8BBE\u7F6E \u2192 \u504F\u597D\u8BBE\u7F6E \u2192 \u8BED\u8A00\u300D\u4E2D\u9009\u62E9\u300C\u7B80\u4F53\u4E2D\u6587\u300D\u3002");
+    log(m.done(pct, stats.translated, stats.total));
+    log(m.langHint);
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
   if (opts.launch && !opts.yes && !opts.dir) {
-    const answer = await ask("\n\u662F\u5426\u7ACB\u5373\u542F\u52A8 Factory\uFF1F[Y/n]\uFF1A");
+    const answer = await ask(m.launchPrompt);
     if (!answer || /^y/i.test(answer)) {
       const stub = path.join(path.dirname(p.appDir), "factory-desktop.exe");
       spawn(fs.existsSync(stub) ? stub : p.exe, [], { detached: true, stdio: "ignore" }).unref();
     }
   }
 }
-async function restore(p, opts) {
+async function restore(p, opts, m) {
   if (!fs.existsSync(p.asarBackup) || !fs.existsSync(p.exeBackup)) {
-    if (!isPatched(p.asar)) return log("\u5F53\u524D\u5DF2\u662F\u82F1\u6587\u539F\u7248\uFF0C\u65E0\u9700\u6062\u590D\u3002");
-    fail("\u627E\u4E0D\u5230\u539F\u7248\u5907\u4EFD\u6587\u4EF6\uFF0C\u65E0\u6CD5\u6062\u590D\u3002\u8BF7\u91CD\u65B0\u5B89\u88C5 Factory \u684C\u9762\u7248\u3002");
+    if (!isPatched(p.asar)) return log(m.alreadyEnglish);
+    fail(m.noBackupRestore);
   }
-  integrityInfo(p.asarBackup, p.exeBackup);
-  await ensureClosed(p.appDir, opts);
-  log("\u6B63\u5728\u6062\u590D\u82F1\u6587\u539F\u7248...");
+  integrityInfo(p.asarBackup, p.exeBackup, m);
+  await ensureClosed(p.appDir, opts, m);
+  log(m.restoring);
   swapIn(p, p.asarBackup, fs.readFileSync(p.exeBackup));
-  if (headerHash(p.asar) !== headerHash(p.asarBackup)) fail("\u6062\u590D\u540E\u6821\u9A8C\u5931\u8D25\u3002");
+  if (headerHash(p.asar) !== headerHash(p.asarBackup)) fail(m.restoreVerifyFailed);
   fs.rmSync(p.asarBackup, { force: true });
   fs.rmSync(p.exeBackup, { force: true });
-  log("\u5DF2\u6062\u590D\u82F1\u6587\u539F\u7248\u3002");
+  log(m.restored);
 }
-function status(p) {
+function status(p, m) {
   const patched = isPatched(p.asar);
   const hasBackup = fs.existsSync(p.asarBackup) && fs.existsSync(p.exeBackup);
-  log(`\u7248\u672C\uFF1A${path.basename(p.appDir).replace(/^app-/, "")}`);
-  log(`\u4E2D\u6587\u8865\u4E01\uFF1A${patched ? "\u5DF2\u5B89\u88C5" : "\u672A\u5B89\u88C5"}`);
-  log(`\u539F\u7248\u5907\u4EFD\uFF1A${hasBackup ? "\u5B58\u5728" : "\u65E0"}`);
-  log(`\u8BCD\u5178\u6761\u76EE\uFF1A${Object.keys(loadDictionary()).length}`);
+  log(m.version(path.basename(p.appDir).replace(/^app-/, "")));
+  log(m.patchState(patched ? m.installed : m.notPatched));
+  log(m.backupState(hasBackup ? m.backupYes : m.backupNo));
+  log(m.dictEntries(Object.keys(loadDictionary(m)).length));
 }
-async function report(p) {
+async function report(p, m) {
   const source = isPatched(p.asar) ? p.asarBackup : p.asar;
-  if (!fs.existsSync(source)) fail("\u627E\u4E0D\u5230\u539F\u7248 app.asar\u3002");
+  if (!fs.existsSync(source)) fail(m.noAsar);
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "factory-zh-cn-"));
   try {
     const archive = path.join(work, "app.asar");
@@ -9505,27 +9641,32 @@ async function report(p) {
     if (fs.existsSync(p.unpacked)) fs.cpSync(p.unpacked, archive + ".unpacked", { recursive: true });
     const appDir = path.join(work, "app");
     asar.extractAll(archive, appDir);
-    const { stats } = buildTranslations(locateSources(appDir), loadDictionary());
+    const { stats } = buildTranslations(locateSources(appDir, m), loadDictionary(m), m);
     const missing = Object.fromEntries([...stats.missing].sort().map((s) => [s, ""]));
     fs.writeFileSync(UNTRANSLATED_PATH, JSON.stringify(missing, null, 2) + "\n");
-    log(`\u8986\u76D6\u7387\uFF1A${stats.translated}/${stats.total}\uFF0C\u672A\u7FFB\u8BD1\u7684\u82F1\u6587\u6587\u672C ${Object.keys(missing).length} \u6761\u5DF2\u5199\u5165\uFF1A${UNTRANSLATED_PATH}`);
+    log(m.coverage(stats.translated, stats.total, Object.keys(missing).length, UNTRANSLATED_PATH));
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
 }
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  if (process.platform !== "win32" && !opts.dir) fail("\u76EE\u524D\u4EC5\u652F\u6301 Windows \u7248 Factory\u3002");
-  const p = appPaths(locateAppDir(opts.dir));
-  log(`Factory \u5B89\u88C5\u76EE\u5F55\uFF1A${p.appDir}
-`);
-  if (opts.command === "install") await install(p, opts);
-  else if (opts.command === "restore") await restore(p, opts);
-  else if (opts.command === "status") status(p);
-  else await report(p);
+  const m = M[detectLang(opts.lang)];
+  if (process.platform !== "win32" && !opts.dir) fail(m.winOnly);
+  const p = appPaths(locateAppDir(opts.dir, m), m);
+  log(m.installDir(p.appDir));
+  if (opts.command === "install") await install(p, opts, m);
+  else if (opts.command === "restore") await restore(p, opts, m);
+  else if (opts.command === "status") status(p, m);
+  else await report(p, m);
 }
 main().catch((err) => {
+  let lang = "en";
+  try {
+    lang = detectLang(parseArgs(process.argv.slice(2)).lang);
+  } catch {
+  }
   console.error(err instanceof PatchError ? `
-[\u9519\u8BEF] ${err.message}` : err);
+${M[lang].error} ${err.message}` : err);
   process.exitCode = 1;
 });
